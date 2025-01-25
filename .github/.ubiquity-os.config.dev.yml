@@ -1,0 +1,651 @@
+plugins:
+  - uses:
+      - plugin: http://127.0.0.1:4000
+        with:
+          labels:
+            time:
+              - "Time: <15 Minutes"
+              - "Time: <1 Hour"
+              - "Time: <2 Hours"
+              - "Time: <4 Hours"
+              - "Time: <1 Day"
+              - "Time: <1 Week"
+              - "Time: <2 Weeks"
+              - "Time: <1 Month"
+            priority:
+              - "Priority: 1 (Normal)"
+              - "Priority: 2 (Medium)"
+              - "Priority: 3 (High)"
+              - "Priority: 4 (Urgent)"
+              - "Priority: 5 (Emergency)"
+          basePriceMultiplier: 2
+          publicAccessControl:
+            setLabel: true
+            fundExternalClosedIssue: false
+  - uses:
+      # - plugin: ishowvel/daemon-pull-review:compute.yml@testing
+      - plugin: http://localhost:4003
+        name: daemon-pull-precheck
+        with:
+          openRouterAiModel: "meta-llama/llama-3.1-70b-instruct:free"
+          tokenLimit: { context:  8000, completion: 300 }
+
+  - uses:
+      - plugin: ishowvel/daemon-disqualifier:compute.yml@testing-2
+        with:
+          disqualification: "2 minutes"
+          warning: "1 minutes"
+          prioritySpeed: true
+          watch:
+            optOut:
+              - "repoName"
+              - "repoName2"
+          eventWhitelist:
+            - "pull_request.review_requested"
+            - "pull_request.ready_for_review"
+            - "pull_request_review_comment.created"
+            - "issue_comment.created"
+            - "push"
+
+  - uses:
+      - plugin: http://127.0.0.1:4001 # or the URL where the plugin is hosted
+        name: start-stop
+        id: start-stop-command
+        with:
+          reviewDelayTolerance: "3 Days"
+          taskStaleTimeoutDuration: "30 Days"
+          maxConcurrentTasks: # Default concurrent task limits per role.
+            member: 5
+            contributor: 3
+          startRequiresWallet: true # default is true
+          emptyWalletText: "Please set your wallet address with the /wallet command first and try again."
+          rolesWithReviewAuthority: ["MEMBER", "OWNER"]
+
+  - uses:
+      - plugin: http://127.0.0.1:4002
+        id: command-wallet
+        with:
+          registerWalletWithVerification: false
+          
+  - uses:
+      - plugin: ishowvel/text-conversation-rewards:compute.yml@testing
+        with:
+          logLevel: "debug"
+          evmNetworkId: 100
+          evmPrivateEncrypted: "qAs44ITyol7x7PnCTGXvlI5igxczqIVR-kEOfL9MsUu67My8hTsN9CD6HiP8fIk7doCWD50MzyuwBIFD04QCUbBAb3nIymvnkaSypCI4jK0WEvuO9aPTz7rozC2c4asblzeZ0mPADEcTN5guKpQacdCPXbOUrtJ9l-I"
+          erc20RewardToken: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d"
+          dataCollection:
+            maxAttempts: 10
+            delayMs: 10000
+          incentives:
+            requirePriceLabel: true
+            contentEvaluator:
+              openAi:
+                model: "gpt-4o"
+                endpoint: "https://api.openai.com/v1"
+              multipliers:
+                - role: [ISSUE_SPECIFICATION]
+                  relevance: 1
+                - role: [PULL_AUTHOR]
+                  relevance: 1
+                - role: [PULL_ASSIGNEE]
+                  relevance: 1
+                - role: [PULL_COLLABORATOR]
+                  relevance: 1
+                - role: [PULL_CONTRIBUTOR]
+                  relevance: 1
+            userExtractor:
+              redeemTask: true
+            dataPurge: {}
+            reviewIncentivizer:
+              baseRate: 100
+              conclusiveReviewCredit: 25
+            formattingEvaluator:
+              wordCountExponent: 0.85
+              multipliers:
+                - role: ["ISSUE_SPECIFICATION"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["ISSUE_AUTHOR"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.2
+                - role: ["ISSUE_ASSIGNEE"]
+                  multiplier: 0
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0
+                - role: ["ISSUE_COLLABORATOR"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["ISSUE_CONTRIBUTOR"]
+                  multiplier: 0.25
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["PULL_SPECIFICATION"]
+                  multiplier: 0
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0
+                - role: ["PULL_AUTHOR"]
+                  multiplier: 2
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.2
+                - role: ["PULL_ASSIGNEE"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["PULL_COLLABORATOR"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["PULL_CONTRIBUTOR"]
+                  multiplier: 0.25
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+            permitGeneration: {}
+            githubComment:
+              post: true
+              debug: false
+
+  
+  - uses:
+      - plugin: http://127.0.0.1:6969
+        with:
+          logLevel: "debug"
+          evmNetworkId: 100
+          evmPrivateEncrypted: "qAs44ITyol7x7PnCTGXvlI5igxczqIVR-kEOfL9MsUu67My8hTsN9CD6HiP8fIk7doCWD50MzyuwBIFD04QCUbBAb3nIymvnkaSypCI4jK0WEvuO9aPTz7rozC2c4asblzeZ0mPADEcTN5guKpQacdCPXbOUrtJ9l-I"
+          erc20RewardToken: "0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d"
+          dataCollection:
+            maxAttempts: 10
+            delayMs: 10000
+          incentives:
+            requirePriceLabel: true
+            contentEvaluator:
+              openAi:
+                model: "gpt-4o"
+                endpoint: "https://api.openai.com/v1"
+              multipliers:
+                - role: [ISSUE_SPECIFICATION]
+                  relevance: 1
+                - role: [PULL_AUTHOR]
+                  relevance: 1
+                - role: [PULL_ASSIGNEE]
+                  relevance: 1
+                - role: [PULL_COLLABORATOR]
+                  relevance: 1
+                - role: [PULL_CONTRIBUTOR]
+                  relevance: 1
+            userExtractor:
+              redeemTask: true
+            dataPurge: {}
+            reviewIncentivizer:
+              baseRate: 100
+              conclusiveReviewCredit: 25
+            formattingEvaluator:
+              wordCountExponent: 0.85
+              multipliers:
+                - role: ["ISSUE_SPECIFICATION"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["ISSUE_AUTHOR"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.2
+                - role: ["ISSUE_ASSIGNEE"]
+                  multiplier: 0
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0
+                - role: ["ISSUE_COLLABORATOR"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["ISSUE_CONTRIBUTOR"]
+                  multiplier: 0.25
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["PULL_SPECIFICATION"]
+                  multiplier: 0
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0
+                - role: ["PULL_AUTHOR"]
+                  multiplier: 2
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.2
+                - role: ["PULL_ASSIGNEE"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["PULL_COLLABORATOR"]
+                  multiplier: 1
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+                - role: ["PULL_CONTRIBUTOR"]
+                  multiplier: 0.25
+                  rewards:
+                    html:
+                      br: { score: 0, countWords: true }
+                      code: { score: 5, countWords: false }
+                      p: { score: 0, countWords: true }
+                      em: { score: 0, countWords: true }
+                      img: { score: 5, countWords: true }
+                      strong: { score: 0, countWords: false }
+                      blockquote: { score: 0, countWords: false }
+                      h1: { score: 1, countWords: true }
+                      h2: { score: 1, countWords: true }
+                      h3: { score: 1, countWords: true }
+                      h4: { score: 1, countWords: true }
+                      h5: { score: 1, countWords: true }
+                      h6: { score: 1, countWords: true }
+                      a: { score: 5, countWords: true }
+                      li: { score: 0.5, countWords: true }
+                      ul: { score: 1, countWords: true }
+                      td: { score: 0, countWords: true }
+                      hr: { score: 0, countWords: true }
+                      pre: { score: 0, countWords: false }
+                      ol: { score: 1, countWords: true }
+                    wordValue: 0.1
+            permitGeneration: {}
+            githubComment:
+              post: true
+              debug: false
